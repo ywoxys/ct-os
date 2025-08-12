@@ -133,14 +133,6 @@ export const seedLocalData = async () => {
       setLocalUsers(demoUsers);
       setLocalClients(demoClients);
 
-      // Add demo employees
-      const demoEmployees = demoUsers.map(user => ({
-        ...user,
-        createdBy: '1',
-        updatedBy: '1',
-      }));
-      localStorage.setItem('ct-employees', JSON.stringify(demoEmployees));
-
       // Add demo notifications
       const demoNotifications = [
         {
@@ -162,6 +154,32 @@ export const seedLocalData = async () => {
       ];
       localStorage.setItem('ct-notifications', JSON.stringify(demoNotifications));
 
+      // Add demo cash flows
+      const demoCashFlows = [
+        {
+          id: '1',
+          userId: '1',
+          userName: 'Admin Principal',
+          type: 'entrada',
+          amount: 5000,
+          description: 'Venda inicial',
+          category: 'Vendas',
+          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        },
+        {
+          id: '2',
+          userId: '2',
+          userName: 'João Silva',
+          type: 'saida',
+          amount: 1200,
+          description: 'Compra de materiais',
+          category: 'Fornecedores',
+          date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+          createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+        },
+      ];
+      localStorage.setItem('ct-cash-flows', JSON.stringify(demoCashFlows));
       console.log('Local demo data seeded successfully');
     }
   } catch (error) {
