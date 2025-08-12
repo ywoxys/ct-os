@@ -1,12 +1,13 @@
 import React from 'react';
 import { 
   Users, 
-  History, 
   UserCheck, 
   Calculator, 
   FileSpreadsheet, 
   Home,
-  LogOut
+  LogOut,
+  MessageSquare,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -48,6 +49,23 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
       icon: <Calculator className="w-5 h-5" />,
     },
     {
+      id: 'chat',
+      label: 'Chat',
+      icon: <MessageSquare className="w-5 h-5" />,
+    },
+    {
+      id: 'reports',
+      label: 'Relatórios',
+      icon: <BarChart3 className="w-5 h-5" />,
+      requiredRole: ['administrador-all', 'administrador'],
+    },
+    {
+      id: 'ztalk',
+      label: 'ZTalk',
+      icon: <MessageSquare className="w-5 h-5" />,
+      requiredRole: ['administrador-all', 'administrador'],
+    },
+    {
       id: 'integration',
       label: 'Integração',
       icon: <FileSpreadsheet className="w-5 h-5" />,
@@ -67,6 +85,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
         return 'bg-red-100 text-red-800';
       case 'administrador':
         return 'bg-blue-100 text-blue-800';
+      case 'whatsapp':
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

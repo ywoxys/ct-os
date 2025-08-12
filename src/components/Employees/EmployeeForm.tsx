@@ -28,6 +28,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
     { value: 'funcionario', label: 'Funcionário' },
     { value: 'administrador', label: 'Administrador' },
     { value: 'administrador-all', label: 'Administrador Geral' },
+    { value: 'whatsapp', label: 'WhatsApp' },
   ];
 
   const setores: { value: Setor; label: string }[] = [

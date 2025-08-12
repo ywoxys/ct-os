@@ -5,6 +5,8 @@ import { CashProvider } from './contexts/CashContext';
 import { EmployeeProvider } from './contexts/EmployeeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ChatProvider } from './contexts/ChatContext';
+import { ZTalkProvider } from './contexts/ZTalkContext';
 import { useDatabase } from './hooks/useDatabase';
 import LoginForm from './components/Auth/LoginForm';
 import Sidebar from './components/Layout/Sidebar';
@@ -13,7 +15,9 @@ import Dashboard from './pages/Dashboard';
 import ClientsPage from './pages/ClientsPage';
 import CashPage from './pages/CashPage';
 import EmployeesPage from './pages/EmployeesPage';
-// Removido HistoryPage e IntegrationPage placeholder se preferir pode manter IntegrationPage
+import ChatWindow from './components/Chat/ChatWindow';
+import ReportsPage from './components/Reports/ReportsPage';
+import ZTalkPage from './components/ZTalk/ZTalkPage';
 
 const IntegrationPage = () => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
@@ -27,6 +31,7 @@ const AppContent = () => {
   const { isConnected, isConnecting, error, useLocalMode } = useDatabase();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     if (isConnected) {
@@ -84,6 +89,12 @@ const AppContent = () => {
         return 'Funcionários';
       case 'cash':
         return 'Caixa';
+      case 'chat':
+        return 'Chat Interno';
+      case 'reports':
+        return 'Relatórios';
+      case 'ztalk':
+        return 'ZTalk';
       case 'integration':
         return 'Integração';
       default:
@@ -101,6 +112,14 @@ const AppContent = () => {
         return <EmployeesPage />;
       case 'cash':
         return <CashPage />;
+      case 'chat':
+        setChatOpen(true);
+        setCurrentPage('dashboard');
+        return <Dashboard />;
+      case 'reports':
+        return <ReportsPage />;
+      case 'ztalk':
+        return <ZTalkPage />;
       case 'integration':
         return <IntegrationPage />;
       default:
@@ -155,6 +174,9 @@ const AppContent = () => {
             {renderPage()}
           </main>
         </div>
+        
+        {/* Chat Window */}
+        <ChatWindow isOpen={chatOpen} onClose={() => setChatOpen(false)} />
       </div>
   );
 };
@@ -164,13 +186,17 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <NotificationProvider>
-            <ClientProvider>
-              <CashProvider>
-                <EmployeeProvider>
-                  <AppContent />
-                </EmployeeProvider>
-              </CashProvider>
-            </ClientProvider>
+            <ChatProvider>
+              <ZTalkProvider>
+                <ClientProvider>
+                  <CashProvider>
+                    <EmployeeProvider>
+                      <AppContent />
+                    </EmployeeProvider>
+                  </CashProvider>
+                </ClientProvider>
+              </ZTalkProvider>
+            </ChatProvider>
           </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
