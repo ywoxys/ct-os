@@ -23,7 +23,6 @@ export class UserService {
       .from('users')
       .select('*')
       .or(`login.eq.${loginOrEmail},email.eq.${loginOrEmail}`)
-      .eq('is_active', true)
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
@@ -83,6 +82,7 @@ export class UserService {
       login: user.login,
       createdAt: new Date(user.created_at),
       isActive: user.is_active,
+      password: user.password, // Adicionar password para validação
     };
   }
 }

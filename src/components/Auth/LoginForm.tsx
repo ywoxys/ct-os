@@ -21,10 +21,11 @@ const LoginForm: React.FC = () => {
     try {
       const success = await login(loginData.login, loginData.password);
       if (!success) {
-        setError('Credenciais inválidas. Verifique seu login e senha.');
+        setError('Login ou senha incorretos. Tente novamente.');
       }
     } catch (err) {
-      setError('Erro ao realizar login. Tente novamente.');
+      console.error('Login error:', err);
+      setError('Erro no sistema. Tente novamente em alguns instantes.');
     } finally {
       setIsLoading(false);
     }

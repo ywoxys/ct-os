@@ -8,6 +8,7 @@ export interface User {
   login: string;
   createdAt: Date;
   isActive: boolean;
+  password?: string; // Opcional para não quebrar outras partes
 }
 
 export interface Client {
