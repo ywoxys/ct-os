@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Notification } from '../types';
 import { useAuth } from './AuthContext';
+import { useDatabase } from '../hooks/useDatabase';
+import { SupabaseNotificationService } from '../services/supabaseNotificationService';
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -39,15 +41,19 @@ const setNotifications = (notifications: Notification[]): void => {
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [notifications, setNotificationsState] = useState<Notification[]>([]);
   const { user } = useAuth();
+  const { isConnected, useLocalMode } = useDatabase();
 
   useEffect(() => {
     const loadNotifications = () => {
-      const notifs = getNotifications();
-      // Filter notifications for current user or global notifications
-      const userNotifications = notifs.filter(n => 
-        !n.userId || n.userId === user?.id
-      );
-      setNotificationsState(userNotifications);
+      if (useLocalMode) {
+        const notifs = getNotifications();
+        const userNotifications = notifs.filter(n => 
+          !n.userId || n.userId === user?.id
+        );
+        setNotificationsState(userNotifications);
+      } else if (isConnected && user) {
+        loadSupabaseNotifications();
+      }
     };
 
     if (user) {
@@ -64,65 +70,124 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     return () => clearInterval(interval);
   }, []);
 
+  const loadSupabaseNotifications = async () => {
+    try {
+      const notifs = await SupabaseNotificationService.findByUserId(user?.id);
+      setNotificationsState(notifs);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  };
   const refreshData = () => {
-    const notifs = getNotifications();
-    const userNotifications = notifs.filter(n => 
-      !n.userId || n.userId === user?.id
-    );
-    setNotificationsState(userNotifications);
-  };
-
-  const addNotification = (notificationData: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => {
-    const newNotification: Notification = {
-      ...notificationData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      isRead: false,
-    };
-
-    const notifications = getNotifications();
-    notifications.push(newNotification);
-    setNotifications(notifications);
-    refreshData();
-  };
-
-  const markAsRead = (id: string) => {
-    const notifications = getNotifications();
-    const index = notifications.findIndex(n => n.id === id);
-    
-    if (index !== -1) {
-      notifications[index] = { ...notifications[index], isRead: true };
-      setNotifications(notifications);
-      refreshData();
+    if (useLocalMode) {
+      const notifs = getNotifications();
+      const userNotifications = notifs.filter(n => 
+        !n.userId || n.userId === user?.id
+      );
+      setNotificationsState(userNotifications);
+    } else if (isConnected) {
+      loadSupabaseNotifications();
     }
   };
 
-  const markAllAsRead = () => {
-    const notifications = getNotifications();
-    const updatedNotifications = notifications.map(n => 
-      (!n.userId || n.userId === user?.id) ? { ...n, isRead: true } : n
-    );
-    setNotifications(updatedNotifications);
-    refreshData();
-  };
+  const addNotification = async (notificationData: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => {
+    try {
+      if (useLocalMode) {
+        const newNotification: Notification = {
+          ...notificationData,
+          id: Date.now().toString(),
+          createdAt: new Date(),
+          isRead: false,
+        };
 
-  const deleteNotification = (id: string) => {
-    const notifications = getNotifications();
-    const filteredNotifications = notifications.filter(n => n.id !== id);
-    setNotifications(filteredNotifications);
-    refreshData();
-  };
-
-  const clearExpired = () => {
-    const notifications = getNotifications();
-    const now = new Date();
-    const validNotifications = notifications.filter(n => 
-      !n.expiresAt || n.expiresAt > now
-    );
-    
-    if (validNotifications.length !== notifications.length) {
-      setNotifications(validNotifications);
+        const notifications = getNotifications();
+        notifications.push(newNotification);
+        setNotifications(notifications);
+      } else {
+        await SupabaseNotificationService.createNotification({
+          title: notificationData.title,
+          message: notificationData.message,
+          type: notificationData.type,
+          user_id: notificationData.userId,
+          expires_at: notificationData.expiresAt?.toISOString(),
+        });
+      }
       refreshData();
+    } catch (error) {
+      console.error('Error adding notification:', error);
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    try {
+      if (useLocalMode) {
+        const notifications = getNotifications();
+        const index = notifications.findIndex(n => n.id === id);
+        
+        if (index !== -1) {
+          notifications[index] = { ...notifications[index], isRead: true };
+          setNotifications(notifications);
+        }
+      } else {
+        await SupabaseNotificationService.markAsRead(id);
+      }
+      refreshData();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      if (useLocalMode) {
+        const notifications = getNotifications();
+        const updatedNotifications = notifications.map(n => 
+          (!n.userId || n.userId === user?.id) ? { ...n, isRead: true } : n
+        );
+        setNotifications(updatedNotifications);
+      } else if (user) {
+        await SupabaseNotificationService.markAllAsRead(user.id);
+      }
+      refreshData();
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    try {
+      if (useLocalMode) {
+        const notifications = getNotifications();
+        const filteredNotifications = notifications.filter(n => n.id !== id);
+        setNotifications(filteredNotifications);
+      } else {
+        await SupabaseNotificationService.deleteNotification(id);
+      }
+      refreshData();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  const clearExpired = async () => {
+    try {
+      if (useLocalMode) {
+        const notifications = getNotifications();
+        const now = new Date();
+        const validNotifications = notifications.filter(n => 
+          !n.expiresAt || n.expiresAt > now
+        );
+        
+        if (validNotifications.length !== notifications.length) {
+          setNotifications(validNotifications);
+          refreshData();
+        }
+      } else {
+        await SupabaseNotificationService.deleteExpired();
+      }
+      refreshData();
+    } catch (error) {
+      console.error('Error clearing expired notifications:', error);
     }
   };
 

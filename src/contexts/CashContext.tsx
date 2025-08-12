@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { CashFlow } from '../types';
 import { useAuth } from './AuthContext';
 import { useDatabase } from '../hooks/useDatabase';
+import { SupabaseCashService } from '../services/supabaseCashService';
+import { LocalCashService } from '../services/localCashService';
 
 interface CashContextType {
   cashFlows: CashFlow[];
@@ -47,7 +49,12 @@ export const CashProvider: React.FC<CashProviderProps> = ({ children }) => {
     const loadData = async () => {
       if (isConnected) {
         try {
-          const flows = getCashFlows();
+          let flows;
+          if (useLocalMode) {
+            flows = LocalCashService.getCashFlows();
+          } else {
+            flows = await SupabaseCashService.findAll();
+          }
           setCashFlowsState(flows);
         } catch (error) {
           console.error('Error loading cash flows:', error);
@@ -61,43 +68,80 @@ export const CashProvider: React.FC<CashProviderProps> = ({ children }) => {
   }, [isConnected, useLocalMode]);
 
   const refreshData = () => {
-    const flows = getCashFlows();
-    setCashFlowsState(flows);
+    const loadData = async () => {
+      try {
+        let flows;
+        if (useLocalMode) {
+          flows = LocalCashService.getCashFlows();
+        } else {
+          flows = await SupabaseCashService.findAll();
+        }
+        setCashFlowsState(flows);
+      } catch (error) {
+        console.error('Error refreshing cash flows:', error);
+      }
+    };
+    loadData();
   };
 
-  const addCashFlow = (cashFlowData: Omit<CashFlow, 'id' | 'userId' | 'userName' | 'createdAt'>) => {
+  const addCashFlow = async (cashFlowData: Omit<CashFlow, 'id' | 'userId' | 'userName' | 'createdAt'>) => {
     if (!user) return;
 
-    const newCashFlow: CashFlow = {
-      ...cashFlowData,
-      id: Date.now().toString(),
-      userId: user.id,
-      userName: user.name,
-      createdAt: new Date(),
-    };
-
-    const flows = getCashFlows();
-    flows.push(newCashFlow);
-    setCashFlows(flows);
-    refreshData();
-  };
-
-  const updateCashFlow = (id: string, updates: Partial<CashFlow>) => {
-    const flows = getCashFlows();
-    const index = flows.findIndex(f => f.id === id);
-    
-    if (index !== -1) {
-      flows[index] = { ...flows[index], ...updates };
-      setCashFlows(flows);
+    try {
+      if (useLocalMode) {
+        LocalCashService.addCashFlow({
+          ...cashFlowData,
+          userId: user.id,
+          userName: user.name,
+        });
+      } else {
+        await SupabaseCashService.createCashFlow({
+          user_id: user.id,
+          user_name: user.name,
+          type: cashFlowData.type,
+          amount: cashFlowData.amount,
+          description: cashFlowData.description,
+          category: cashFlowData.category,
+          date: cashFlowData.date.toISOString().split('T')[0],
+        });
+      }
       refreshData();
+    } catch (error) {
+      console.error('Error adding cash flow:', error);
     }
   };
 
-  const deleteCashFlow = (id: string) => {
-    const flows = getCashFlows();
-    const filteredFlows = flows.filter(f => f.id !== id);
-    setCashFlows(filteredFlows);
-    refreshData();
+  const updateCashFlow = async (id: string, updates: Partial<CashFlow>) => {
+    try {
+      if (useLocalMode) {
+        LocalCashService.updateCashFlow(id, updates);
+      } else {
+        const updateData: any = {};
+        if (updates.type) updateData.type = updates.type;
+        if (updates.amount) updateData.amount = updates.amount;
+        if (updates.description) updateData.description = updates.description;
+        if (updates.category) updateData.category = updates.category;
+        if (updates.date) updateData.date = updates.date.toISOString().split('T')[0];
+        
+        await SupabaseCashService.updateCashFlow(id, updateData);
+      }
+      refreshData();
+    } catch (error) {
+      console.error('Error updating cash flow:', error);
+    }
+  };
+
+  const deleteCashFlow = async (id: string) => {
+    try {
+      if (useLocalMode) {
+        LocalCashService.deleteCashFlow(id);
+      } else {
+        await SupabaseCashService.deleteCashFlow(id);
+      }
+      refreshData();
+    } catch (error) {
+      console.error('Error deleting cash flow:', error);
+    }
   };
 
   const getTotalBalance = () => {
